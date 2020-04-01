@@ -44,6 +44,8 @@ the installation simple. Documentation on installing docker can be found [here](
 * Git will also need to be installed in order to fetch the repository from Github.
 Installation instructions can be found [here](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
 
+* If building locally you will need to install Go version 1.14 or greater. [Instructions](https://golang.org/doc/install).
+
 #### Fetch from Github
 
 The following commands will clone a local copy of the service and put you in the
