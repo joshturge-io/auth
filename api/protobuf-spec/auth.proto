@@ -34,18 +34,3 @@ service Authentication {
   rpc ValidateJWT (JWT) returns (ValidityStatus);
   rpc Logout (Session) returns (LogoutStatus);
 }
-
-message Permission {
-  string user_id = 1;
-  int32 perm_lvl = 2;
-}
-
-message CheckStatus {
-  bool HasPermission = 1;
-}
-
-service Authorisation {
-  rpc Check (Permission) returns (CheckStatus);
-  //rpc AddPermission () returns ();
-  //rpc RemovePermission () returns ();
-}

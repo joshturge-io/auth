@@ -64,18 +64,3 @@ func (ga *GRPCAuthService) Logout(ctx context.Context, sess *proto.Session) (*pr
 func (ga *GRPCAuthService) Register(s *grpc.Server) {
 	proto.RegisterAuthenticationServer(s, ga)
 }
-
-type AuthorisationService struct{}
-
-func NewAuthorisationService() *AuthorisationService {
-	return &AuthorisationService{}
-}
-
-func (as *AuthorisationService) Check(ctx context.Context, perm *proto.Permission) (*proto.CheckStatus,
-	error) {
-	return nil, grpc.Errorf(codes.Unimplemented, "not implemented")
-}
-
-func (as *AuthorisationService) Register(s *grpc.Server) {
-	proto.RegisterAuthorisationServer(s, as)
-}
