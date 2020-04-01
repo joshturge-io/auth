@@ -94,8 +94,8 @@ if there isn't a password.
 
 * `TEST_REPO` - if this variable is set, the test repository will be used
 instead of the redis repository. This is extremely useful when testing. **NOTE:**
-since this is just a test repository the username can be set to an empty string
-(""), the password for the test user is `secret6`. I know, very creative.
+since this is just a test repository the username can be set to any string you
+like, the password for the test user is `secret6`. I know, very creative.
 
 #### Running with docker
 
