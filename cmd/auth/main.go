@@ -9,19 +9,21 @@ import (
 	"github.com/joshturge-io/auth/pkg/cmd"
 )
 
-var configDir string
+var configDir *string
 
 func init() {
-	configDir = *flag.String("config", "./config", "configuration path")
-	flag.Parse()
+	configDir = flag.String("config", ".", "path to config dir")
 }
 
 func main() {
+	flag.Parse()
+
 	var (
 		app = &cmd.App{}
 		err error
 	)
-	if err = app.Initialise(configDir); err != nil {
+
+	if err = app.Initialise(*configDir); err != nil {
 		log.Fatalf("ERROR: Initialisation: %s\n", err.Error())
 	}
 	if err = app.Start(); err != nil {
