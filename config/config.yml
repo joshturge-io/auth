@@ -1,0 +1,17 @@
+# address of the gRPC server
+address: "localhost:8080"
+
+# address of the database
+repo:
+    address: "localhost:6379"
+
+# token options
+token:
+    refresh:
+        # length of a refresh token (in characters)
+        length: 32
+        # expiration time of a refresh token (in hours)
+        expiration: 24
+    jwt:
+        # expiration time of a jwt (in minutes)
+        expiration: 15
