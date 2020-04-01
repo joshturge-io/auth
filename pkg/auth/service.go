@@ -114,6 +114,15 @@ func (s *Service) generateSession(ctx context.Context, userId string) (*Session,
 
 // validateSession will make sure a session has a valid refresh and jw token
 func (s *Service) validateSession(ctx context.Context, sess *Session) error {
+	switch {
+	case sess.UserId == "":
+		return ErrInvalidSession
+	case sess.Refresh == "" || len(sess.Refresh) != s.opt.RefreshTokenLength:
+		return ErrInvalidSession
+	case sess.JWT == "":
+		return ErrInvalidSession
+	}
+
 	validity := make(chan bool, 2)
 	defer close(validity)
 
@@ -157,6 +166,10 @@ func (s *Service) validateSession(ctx context.Context, sess *Session) error {
 
 // SessionWithChallenge create a new session provided a valid challenge (username and password)
 func (s *Service) SessionWithChallenge(ctx context.Context, userId, password string) (*Session, error) {
+	if userId == "" || password == "" {
+		return nil, ErrInvalidChallenge
+	}
+
 	s.repo.WithContext(ctx)
 	var (
 		sa = make(chan string, 1)
