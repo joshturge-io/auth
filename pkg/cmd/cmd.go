@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -23,23 +24,38 @@ type App struct {
 }
 
 // Initialise the repository and create the gRPC server
-func (a *App) Initialise(jwtSecret, dbAddr, grpcAddr string) (err error) {
+func (a *App) Initialise(configPath string) (err error) {
 	a.lg = log.New(os.Stdout, "[INFO] ", log.Ltime|log.Ldate)
+
+	a.lg.Println("Reading configuration file")
+
+	repoPswd := os.Getenv("REPOS_PSWD")
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if repoPswd == "" || jwtSecret == "" {
+		return errors.New("environment variables REPOS_PSWD or JWT_SECRET not set")
+	}
+
+	config, err := ParseConfig(configPath)
+	if err != nil {
+		return fmt.Errorf("unable to read configuration: %w", err)
+	}
 
 	a.lg.Println("Creating connection to database")
 
-	a.repo, err = repository.NewRedisRepository(dbAddr)
+	a.repo, err = repository.NewRedisRepository(config.Repo.Address, repoPswd)
 	if err != nil {
 		return fmt.Errorf("failed to make connection to database: %s", err.Error())
 	}
 
-	a.lg.Printf("Creating gRPC server on: %s\nRegistering gRPC services\n", grpcAddr)
+	a.lg.Printf("Creating gRPC server on: %s\n", config.ServerAddr)
 
-	a.srv, err = grpc.NewServer(grpcAddr, service.NewGRPCAuthService(auth.NewService(jwtSecret, a.repo,
-		// TODO(joshturge): pass from config file
-		&auth.Options{RefreshTokenLength: 32,
-			JWTokenExpiration:      15 * time.Minute,
-			RefreshTokenExpiration: 24 * time.Hour}), a.lg))
+	a.srv, err = grpc.NewServer(config.ServerAddr,
+		service.NewGRPCAuthService(auth.NewService(jwtSecret, a.repo,
+			&auth.Options{
+				RefreshTokenLength:     config.Token.RefreshLength,
+				JWTokenExpiration:      time.Duration(config.Token.JWTExpiration) * time.Minute,
+				RefreshTokenExpiration: time.Duration(config.Token.RefreshExpiration) * time.Hour,
+			}), a.lg))
 	if err != nil {
 		return fmt.Errorf("failed to create gRPC server: %s", err.Error())
 	}

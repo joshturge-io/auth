@@ -2,20 +2,26 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
-	"os"
 	"time"
 
 	"github.com/joshturge-io/auth/pkg/cmd"
 )
+
+var configDir string
+
+func init() {
+	configDir = *flag.String("config", "./config", "configuration path")
+	flag.Parse()
+}
 
 func main() {
 	var (
 		app = &cmd.App{}
 		err error
 	)
-	if err = app.Initialise(os.Getenv("JWT_SECRET"), os.Getenv("REDIS_ADDR"),
-		os.Getenv("GRPC_ADDR")); err != nil {
+	if err = app.Initialise(configDir); err != nil {
 		log.Fatalf("ERROR: Initialisation: %s\n", err.Error())
 	}
 	if err = app.Start(); err != nil {
