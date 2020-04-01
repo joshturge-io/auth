@@ -117,7 +117,7 @@ func (s *Service) validateSession(ctx context.Context, sess *Session) error {
 	switch {
 	case sess.UserId == "":
 		return ErrInvalidSession
-	case sess.Refresh == "" || len(sess.Refresh) != s.opt.RefreshTokenLength:
+	case sess.Refresh == "":
 		return ErrInvalidSession
 	case sess.JWT == "":
 		return ErrInvalidSession
