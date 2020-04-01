@@ -47,14 +47,14 @@ func (a *App) Initialise(configPath string) (err error) {
 		return fmt.Errorf("failed to make connection to database: %s", err.Error())
 	}
 
-	a.lg.Printf("Creating gRPC server on: %s\n", config.ServerAddr)
+	a.lg.Printf("Creating gRPC server on: %s\n", config.Address)
 
-	a.srv, err = grpc.NewServer(config.ServerAddr,
+	a.srv, err = grpc.NewServer(config.Address,
 		service.NewGRPCAuthService(auth.NewService(jwtSecret, a.repo,
 			&auth.Options{
-				RefreshTokenLength:     config.Token.RefreshLength,
-				JWTokenExpiration:      time.Duration(config.Token.JWTExpiration) * time.Minute,
-				RefreshTokenExpiration: time.Duration(config.Token.RefreshExpiration) * time.Hour,
+				RefreshTokenLength:     config.Token.Refresh.Length,
+				JWTokenExpiration:      time.Duration(config.Token.Jwt.Expiration) * time.Minute,
+				RefreshTokenExpiration: time.Duration(config.Token.Refresh.Expiration) * time.Hour,
 			}), a.lg))
 	if err != nil {
 		return fmt.Errorf("failed to create gRPC server: %s", err.Error())
