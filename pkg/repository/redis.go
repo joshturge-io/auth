@@ -15,15 +15,14 @@ type redisKeyStore struct {
 }
 
 // NewRedisRepository will create a new connection to a redis server
-func NewRedisRepository(addr string) (Repository, error) {
-	opt, err := redis.ParseURL(addr)
-	if err != nil {
-		return nil, err
-	}
+func NewRedisRepository(addr, password string) (Repository, error) {
+	rks := &redisKeyStore{redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: password,
+		DB:       0,
+	})}
 
-	rks := &redisKeyStore{redis.NewClient(opt)}
-
-	if err = rks.Ping().Err(); err != nil {
+	if err := rks.Ping().Err(); err != nil {
 		return nil, err
 	}
 
