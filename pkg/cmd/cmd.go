@@ -48,7 +48,7 @@ func (a *App) Initialise(configPath string) (err error) {
 	} else {
 		a.repo, err = repository.NewRedisRepository(config.Repo.Address, repoPswd)
 		if err != nil {
-			return fmt.Errorf("failed to make connection to database: %s", err.Error())
+			return fmt.Errorf("failed to make connection to database: %w", err)
 		}
 	}
 
@@ -62,7 +62,7 @@ func (a *App) Initialise(configPath string) (err error) {
 				RefreshTokenExpiration: time.Duration(config.Token.Refresh.Expiration) * time.Hour,
 			}), a.lg))
 	if err != nil {
-		return fmt.Errorf("failed to create gRPC server: %s", err.Error())
+		return fmt.Errorf("failed to create gRPC server: %w", err)
 	}
 
 	return nil

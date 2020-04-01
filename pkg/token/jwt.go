@@ -28,12 +28,12 @@ func NewJW(secret, username string, exp time.Duration) *JW {
 func NewJWFromExisting(secret, tokenStr string) (*JW, error) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("%w: unexpected signing method: %v", ErrJWInvalid, token.Header["alg"])
+			return nil, fmt.Errorf("unexpected signing method: %v: %w", token.Header["alg"], ErrJWInvalid)
 		}
 		return []byte(secret), nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed to parse token: %s", ErrJWInvalid, err.Error())
+		return nil, fmt.Errorf("failed to parse token: %s: %w", tokenStr, err)
 	}
 
 	if !token.Valid {
@@ -42,21 +42,21 @@ func NewJWFromExisting(secret, tokenStr string) (*JW, error) {
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, fmt.Errorf("%w: failed to extract claims: token claims type: %T", ErrJWInvalid, claims)
+		return nil, fmt.Errorf("failed to extract claims: token claims type: %T: %w", claims, ErrJWInvalid)
 	}
 
 	t := &JW{secret: secret, tokenStr: tokenStr}
 
 	t.username, ok = claims["username"].(string)
 	if !ok {
-		return nil, fmt.Errorf("%w: failed to extract username from claim: wanted: string got: %T",
-			ErrJWInvalid, claims["username"])
+		return nil, fmt.Errorf("failed to extract username from claim: wanted: string got: %T: %w",
+			claims["username"], ErrJWInvalid)
 	}
 
 	exp, ok := claims["exp"].(float64)
 	if !ok {
-		return nil, fmt.Errorf("%w: failed to extract expiration from claim: wanted: float64 got: %T",
-			ErrJWInvalid, claims["exp"])
+		return nil, fmt.Errorf("failed to extract expiration from claim: wanted: float64 got: %T: %w",
+			claims["exp"], ErrJWInvalid)
 	}
 
 	t.exp = time.Unix(int64(exp), 0)

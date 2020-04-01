@@ -24,7 +24,7 @@ func NewServer(addr string, services ...proto.Service) (*Server, error) {
 	)
 	srv.listener, err = net.Listen("tcp", addr)
 	if err != nil {
-		return nil, fmt.Errorf("unable to listen to address: %s: %s", addr, err.Error())
+		return nil, fmt.Errorf("unable to listen to address: %s: %w", addr, err)
 	}
 
 	srv.gs = grpc.NewServer()
