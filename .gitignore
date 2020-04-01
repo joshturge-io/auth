@@ -1,3 +1,6 @@
 # ignore all config files except example config
 config/*
 !config/config.yml
+
+# ignore builds
+build/*
