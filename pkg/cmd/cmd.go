@@ -31,8 +31,8 @@ func (a *App) Initialise(configPath string) (err error) {
 
 	repoPswd := os.Getenv("REPOS_PSWD")
 	jwtSecret := os.Getenv("JWT_SECRET")
-	if repoPswd == "" || jwtSecret == "" {
-		return errors.New("environment variables REPOS_PSWD or JWT_SECRET not set")
+	if jwtSecret == "" {
+		return errors.New("environment variable JWT_SECRET not set")
 	}
 
 	config, err := ParseConfig(configPath)
@@ -42,9 +42,14 @@ func (a *App) Initialise(configPath string) (err error) {
 
 	a.lg.Println("Creating connection to database")
 
-	a.repo, err = repository.NewRedisRepository(config.Repo.Address, repoPswd)
-	if err != nil {
-		return fmt.Errorf("failed to make connection to database: %s", err.Error())
+	if os.Getenv("TEST_REPO") != "" {
+		a.lg.Println("WARNING: Using test repository")
+		a.repo = repository.NewTestRepository()
+	} else {
+		a.repo, err = repository.NewRedisRepository(config.Repo.Address, repoPswd)
+		if err != nil {
+			return fmt.Errorf("failed to make connection to database: %s", err.Error())
+		}
 	}
 
 	a.lg.Printf("Creating gRPC server on: %s\n", config.Address)
