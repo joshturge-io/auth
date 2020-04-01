@@ -6,7 +6,7 @@ it's datastore, mainly for it's speed and ability to persist to storage.
 This service uses [JSON Web Tokens](https://jwt.io/) to verify a users session.
 For security reasons these tokens expire within a short amount of time, to prevent
 getting logged out every 10-15 minutes this service also provides refresh tokens
-which allows for renewing sessions. A more detailed explanation of this pattern can
+which allow for renewing sessions. A more detailed explanation of this pattern can
 be found [here](https://hasura.io/blog/best-practices-of-using-jwt-with-graphql/).
 
 ## Getting Started
@@ -14,24 +14,114 @@ be found [here](https://hasura.io/blog/best-practices-of-using-jwt-with-graphql/
 The following instructions will help you spin up a local copy of the service for
 tesing purposes.
 
+## Configuration
+
+This service uses a configuration file to set the gRPC server address and the address
+to a redis instance, these two fields are mandatory as there really isn't any
+default. Within the configuration file you can also specify token generation parameters
+such as the length and expiration of a token, these fields aren't required. An
+example config file can be found [here](config/config.yml).
+
+### Defaults
+
+These are the default values for the service configuration:
+
+| Field Name         | Value        |
+|--------------------|--------------|
+| Address            | None         |
+| Repo Address       | None         |
+| Refresh Length     | 32           |
+| Refresh Expiration | 24 (Hours)   |
+| JWT Expiration     | 15 (Minutes) |
+
+## Building
+
 ### Prerequisites
 
-This service is intended to be run within a docker container in order to keep
-the installation simple.
+* This service is intended to be run within a docker container in order to keep
+the installation simple. Documentation on installing docker can be found [here](https://docs.docker.com/install/).
 
-Documentation on installing docker can be found [here](https://docs.docker.com/install/).
-Once installed, run the command below to build the docker image for this service:
+* Git will also need to be installed in order to fetch the repository from Github.
+Installation instructions can be found [here](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+
+#### Fetch from Github
+
+The following commands will clone a local copy of the service and put you in the
+root of the project where the next steps will need to take place:
+
+```bash
+mkdir $HOME/src
+cd $HOME/src
+git clone https://github.com/joshturge-io/auth.git
+cd auth
+```
+
+#### Building with docker
+
+More information about how to develop with docker can be found [here](https://docs.docker.com/develop/).
+This command will build an image from the [Dockerfile](Dockerfile) in the
+projects root:
 
 ```bash
 docker build --tag auth .
 ```
 
-More information about how to develop with docker can be found [here](https://docs.docker.com/develop/)
+#### Building locally
+
+Alternatively you can just build the project directly without docker:
+
+```bash
+GO111MODULES=auto go build -o auth cmd/auth/main.go
+```
+
+## Running
+
+### Before you run
+
+**NOTE:** Since I haven't set up a docker-compose file you won't be able to use
+a real redis instance at the moment, but I have provided a test struct that satisfies
+the repository interface. In order to run the test repo you need to set an
+environment varible which will be listed below.
+
+The following environment variables can be set to change some functionality of
+the service:
+
+* `JWT_SECRET` - the secret used to sign JSON Web Tokens, this variable is
+mandatory otherwise the service will fail to start.
+
+* `REPO_PSWD` - the password for the redis instance, this variable can be left unset
+if there isn't a password.
+
+* `TEST_REPO` - if this variable is set, the test repository will be used
+instead of the redis repository. This is extremely useful when testing.
+
+#### Running with docker
+
+The following command will run an instance of the docker image we built previously:
+
+```bash
+docker run -p 6380:8080 -e JWT_SECRET='secret' -e TEST_REPO=true auth
+```
+
+I've set this container to bind to port `6380` however this could be anything. I'm
+also using the test repository for the example above, however if you have a real
+redis instance running feel free to use that instead.
+
+#### Running locally
+
+By default, the auth service will look for a `config.yml` inside the directory
+it was run from. To specify an alternative directory you can use the
+`config` argument when running. For example:
+
+```bash
+./auth -config=config/
+```
 
 ## Running Tests
 
-Unit tests can be located within individual packages, an example command for
-running one of the unit tests would be:
+Unit tests can be located within individual packages which can be found under
+the [pkg/](pkg/) directory. An example command for running one of the unit tests
+would be:
 
 ```bash
 go test -v pkg/auth/service_test.go
@@ -48,6 +138,7 @@ More information about running units tests in Go can be found [here](https://gol
 * [go-redis](https://github.com/go-redis/redis)
 * [protobuf](https://github.com/golang/protobuf)
 * [gRPC](https://grpc.io/)
+* [viper](https://github.com/spf13/viper)
 
 ## License
 
