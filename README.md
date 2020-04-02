@@ -70,10 +70,25 @@ docker build --tag auth .
 
 #### Building locally
 
-Alternatively you can just build the project directly without docker:
+##### Windows
+
+You can just build the project directly without docker by using
+the command below:
 
 ```bash
-GO111MODULES=auto go build -o auth cmd/auth/main.go
+mkdir bin/
+go build -o bin/auth.exe cmd/auth/main.go
+```
+
+##### POSIX
+
+I have provided a [Makefile](Makefile) which can be used on POSIX operating systems.
+The file comes with two targets, the first is `build` which will build the project
+and place the binary within a bin directory and the second target `clean` will just
+remove the bin directory. Example usage:
+
+```bash
+make build
 ```
 
 ## Running
