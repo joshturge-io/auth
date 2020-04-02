@@ -3,4 +3,4 @@ config/*
 !config/config.yml
 
 # ignore builds
-build/*
+bin/*
