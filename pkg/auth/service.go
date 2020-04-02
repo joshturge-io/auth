@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/joshturge-io/auth/pkg/repository"
+	"github.com/joshturge-io/auth/pkg/repository/redis"
 	"github.com/joshturge-io/auth/pkg/token"
 	"golang.org/x/sync/errgroup"
 )
@@ -94,7 +95,7 @@ func (s *Service) generateSession(ctx context.Context, userId string) (*Session,
 	})
 
 	if err := errs.Wait(); err != nil {
-		if errors.Is(err, repository.ErrNotExist) {
+		if errors.Is(err, redis.ErrNotExist) {
 			return nil, ErrUserNotExist
 		}
 		return nil, err
@@ -215,7 +216,7 @@ func (s *Service) SessionWithChallenge(ctx context.Context, userId, password str
 	})
 
 	if err := errs.Wait(); err != nil {
-		if errors.Is(err, repository.ErrNotExist) {
+		if errors.Is(err, redis.ErrNotExist) {
 			return nil, ErrUserNotExist
 		}
 		return nil, err
@@ -236,7 +237,7 @@ func (s *Service) IsValidRefresh(ctx context.Context, userId, refresh string) (b
 	s.repo.WithContext(ctx)
 	userRefresh, err := s.repo.GetRefreshToken(userId)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotExist) {
+		if errors.Is(err, redis.ErrNotExist) {
 			return false, ErrUserNotExist
 		}
 		return false, fmt.Errorf("unable to get refresh token for userId: %s: %w", userId, err)
@@ -285,7 +286,7 @@ func (s *Service) DestroySession(ctx context.Context, old *Session) error {
 	})
 
 	if err := errs.Wait(); err != nil {
-		if errors.Is(err, repository.ErrNotExist) {
+		if errors.Is(err, redis.ErrNotExist) {
 			return ErrUserNotExist
 		}
 		return err
