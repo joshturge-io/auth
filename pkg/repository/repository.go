@@ -2,13 +2,8 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"io"
 	"time"
-)
-
-var (
-	ErrNotExist = errors.New("member does not exist")
 )
 
 type Withdrawer interface {

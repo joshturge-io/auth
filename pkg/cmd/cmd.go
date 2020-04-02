@@ -13,6 +13,7 @@ import (
 	"github.com/joshturge-io/auth/pkg/grpc"
 	"github.com/joshturge-io/auth/pkg/grpc/service"
 	"github.com/joshturge-io/auth/pkg/repository"
+	"github.com/joshturge-io/auth/pkg/repository/redis"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -46,7 +47,7 @@ func (a *App) Initialise(configPath string) (err error) {
 		a.lg.Println("WARNING: Using test repository")
 		a.repo = repository.NewTestRepository()
 	} else {
-		a.repo, err = repository.NewRedisRepository(config.Repo.Address, repoPswd)
+		a.repo, err = redis.NewRepository(config.Repo.Address, repoPswd)
 		if err != nil {
 			return fmt.Errorf("failed to make connection to database: %w", err)
 		}
