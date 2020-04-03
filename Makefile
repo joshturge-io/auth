@@ -14,7 +14,7 @@ else
 endif
 
 protoc-check:
-	./scripts/protobuf-check.sh
+	./scripts/protoc_check.sh
 
 protobuf: protoc-check
 	./scripts/protoc_gen.sh
