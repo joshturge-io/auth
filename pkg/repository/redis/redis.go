@@ -3,10 +3,15 @@ package redis
 import (
 	"context"
 	"errors"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/go-redis/redis"
+	"github.com/joshturge-io/auth/pkg/flush"
+	flusher "github.com/joshturge-io/auth/pkg/flush/redis"
+	"github.com/joshturge-io/auth/pkg/repository"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -14,39 +19,49 @@ var (
 	ErrTokenExpired = errors.New("token has expired")
 )
 
-// RedisKeyStore satisfies the Repository interface
-type RedisKeyStore struct {
-	*redis.Client
+// redisKeyStore satisfies the Repository interface
+type redisKeyStore struct {
+	client   *redis.Client
+	flushSvc *flush.Service
 }
 
 // NewRedisRepository will create a new connection to a redis server
-func NewRepository(addr, password string) (*RedisKeyStore, error) {
-	rks := &RedisKeyStore{redis.NewClient(&redis.Options{
+func NewRepository(lg *log.Logger, addr, password string,
+	flushInt time.Duration) (repository.Repository, error) {
+	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: password,
 		DB:       0,
-	})}
+	})
 
-	if err := rks.Ping().Err(); err != nil {
+	if err := client.Ping().Err(); err != nil {
 		return nil, err
 	}
 
-	return rks, nil
+	rks := &redisKeyStore{
+		client,
+		flush.NewService(lg, flusher.NewRedisFlusher(client), flushInt),
+	}
+
+	lg.Println("Starting flushing service")
+	rks.flushSvc.Start()
+
+	return rks, rks.flushSvc.Err()
 }
 
 // fmtUserId will format a user id to work with are redis repo
-func (rks *RedisKeyStore) fmtUserId(userId string) string {
+func (rks *redisKeyStore) fmtUserId(userId string) string {
 	if strings.HasPrefix(userId, "user:") {
 		return userId
 	}
 	return strings.Join([]string{"user", userId}, ":")
 }
 
-func (rks *RedisKeyStore) GetRefreshToken(userId string) (token string, err error) {
+func (rks *redisKeyStore) GetRefreshToken(userId string) (token string, err error) {
 	userId = rks.fmtUserId(userId)
 
-	if rks.HExists(userId, "refresh").Val() {
-		exp, err := rks.HGet(userId, "expiration").Int64()
+	if rks.client.HExists(userId, "refresh").Val() {
+		exp, err := rks.client.HGet(userId, "expiration").Int64()
 		if err != nil {
 			return token, err
 		}
@@ -58,7 +73,7 @@ func (rks *RedisKeyStore) GetRefreshToken(userId string) (token string, err erro
 			return token, ErrTokenExpired
 		}
 
-		token, err = rks.HGet(userId, "refresh").Result()
+		token, err = rks.client.HGet(userId, "refresh").Result()
 		if err != nil {
 			if errors.Is(err, redis.Nil) {
 				return token, ErrNotExist
@@ -72,10 +87,10 @@ func (rks *RedisKeyStore) GetRefreshToken(userId string) (token string, err erro
 	return token, ErrNotExist
 }
 
-func (rks *RedisKeyStore) GetSalt(userId string) (string, error) {
+func (rks *redisKeyStore) GetSalt(userId string) (string, error) {
 	userId = rks.fmtUserId(userId)
 
-	salt, err := rks.HGet(userId, "salt").Result()
+	salt, err := rks.client.HGet(userId, "salt").Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return "", ErrNotExist
@@ -86,10 +101,10 @@ func (rks *RedisKeyStore) GetSalt(userId string) (string, error) {
 	return salt, nil
 }
 
-func (rks *RedisKeyStore) GetHash(userId string) (string, error) {
+func (rks *redisKeyStore) GetHash(userId string) (string, error) {
 	userId = rks.fmtUserId(userId)
 
-	hash, err := rks.HGet(userId, "hash").Result()
+	hash, err := rks.client.HGet(userId, "hash").Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return "", ErrNotExist
@@ -100,11 +115,13 @@ func (rks *RedisKeyStore) GetHash(userId string) (string, error) {
 	return hash, nil
 }
 
-func (rks *RedisKeyStore) SetRefreshToken(userId, token string, exp time.Duration) (err error) {
+func (rks *redisKeyStore) SetRefreshToken(userId, token string,
+	exp time.Duration) (err error) {
 	userId = rks.fmtUserId(userId)
 
-	_, err = rks.Pipelined(func(pipe redis.Pipeliner) error {
-		if err = pipe.HSet(userId, "expiration", time.Now().Add(exp).Unix()).Err(); err != nil {
+	_, err = rks.client.Pipelined(func(pipe redis.Pipeliner) error {
+		if err = pipe.HSet(userId, "expiration",
+			time.Now().Add(exp).Unix()).Err(); err != nil {
 			return err
 		}
 		if err = pipe.HSet(userId, "refresh", token).Err(); err != nil {
@@ -117,18 +134,18 @@ func (rks *RedisKeyStore) SetRefreshToken(userId, token string, exp time.Duratio
 	return err
 }
 
-func (rks *RedisKeyStore) SetSalt(userId, salt string) error {
+func (rks *redisKeyStore) SetSalt(userId, salt string) error {
 	userId = rks.fmtUserId(userId)
-	return rks.HSet(userId, "salt", salt).Err()
+	return rks.client.HSet(userId, "salt", salt).Err()
 }
 
-func (rks *RedisKeyStore) SetHash(userId, hash string) error {
+func (rks *redisKeyStore) SetHash(userId, hash string) error {
 	userId = rks.fmtUserId(userId)
-	return rks.HSet(userId, "hash", hash).Err()
+	return rks.client.HSet(userId, "hash", hash).Err()
 }
 
-func (rks *RedisKeyStore) IsBlacklisted(token string) (bool, error) {
-	_, err := rks.ZRank("blacklist", token).Result()
+func (rks *redisKeyStore) IsBlacklisted(token string) (bool, error) {
+	_, err := rks.client.ZRank("blacklist", token).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return false, nil
@@ -139,18 +156,31 @@ func (rks *RedisKeyStore) IsBlacklisted(token string) (bool, error) {
 	return true, nil
 }
 
-func (rks *RedisKeyStore) SetBlacklist(token string, exp time.Duration) error {
-	return rks.ZAdd("blacklist", redis.Z{
+func (rks *redisKeyStore) SetBlacklist(token string, exp time.Duration) error {
+	return rks.client.ZAdd("blacklist", redis.Z{
 		Score:  float64(time.Now().Add(exp).Unix()),
 		Member: token,
 	}).Err()
 }
 
-func (rks *RedisKeyStore) RemoveRefreshToken(userId string) error {
+func (rks *redisKeyStore) RemoveRefreshToken(userId string) error {
 	userId = rks.fmtUserId(userId)
-	return rks.HDel(userId, "refresh", "expiration").Err()
+	return rks.client.HDel(userId, "refresh", "expiration").Err()
 }
 
-func (rks *RedisKeyStore) WithContext(ctx context.Context) {
+func (rks *redisKeyStore) WithContext(ctx context.Context) {
 	rks.WithContext(ctx)
+}
+
+func (rks *redisKeyStore) Close() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	errs, ctx := errgroup.WithContext(ctx)
+	errs.Go(func() error {
+		return rks.flushSvc.Close(ctx)
+	})
+	errs.Go(rks.client.Close)
+
+	return errs.Wait()
 }

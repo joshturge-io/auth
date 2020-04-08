@@ -3,6 +3,7 @@ address: "localhost:8080"
 
 # address of the database
 repo:
+    flushinterval: 3
     address: "localhost:6379"
 
 # cipher keys used to cipher passwords

@@ -1,6 +1,7 @@
 package redis_test
 
 import (
+	"log"
 	"os"
 	"testing"
 	"time"
@@ -18,7 +19,8 @@ var (
 
 func init() {
 	var err error
-	repo, err = redis.NewRepository(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PSWD"))
+	repo, err = redis.NewRepository(log.New(os.Stdout, "", 0), os.Getenv("REDIS_ADDR"),
+		os.Getenv("REDIS_PSWD"), 3*time.Minute)
 	if err != nil {
 		panic(err)
 	}

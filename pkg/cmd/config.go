@@ -17,7 +17,14 @@ type Configuration struct {
 }
 
 type RepositoryConfig struct {
-	Address string
+	Address       string
+	FlushInterval int
+}
+
+func (rc *RepositoryConfig) SetDefaults() {
+	if rc.FlushInterval == 0 {
+		rc.FlushInterval = 15
+	}
 }
 
 type CipherConfig struct {
@@ -77,10 +84,11 @@ func ParseConfig(path string) (*Configuration, error) {
 		return nil, fmt.Errorf("failed to unmarshal configuration file: %w", err)
 	}
 
-	// set defaults if don't exist
+	// set defaults if none exist
 	config.Token.Refresh.SetDefaults()
 	config.Token.Jwt.SetDefaults()
 	config.Cipher.SetDefaults()
+	config.Repo.SetDefaults()
 
 	return config, nil
 }

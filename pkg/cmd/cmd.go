@@ -47,7 +47,8 @@ func (a *App) Initialise(configPath string) (err error) {
 		a.lg.Println("WARNING: Using test repository")
 		a.repo = repository.NewTestRepository()
 	} else {
-		a.repo, err = redis.NewRepository(config.Repo.Address, repoPswd)
+		a.repo, err = redis.NewRepository(a.lg, config.Repo.Address, repoPswd,
+			time.Duration(config.Repo.FlushInterval)*time.Second)
 		if err != nil {
 			return fmt.Errorf("failed to make connection to database: %w", err)
 		}
@@ -87,9 +88,12 @@ func (a *App) Start() error {
 func (a *App) Shutdown(ctx context.Context) error {
 	a.lg.Println("Closing connection to database")
 	a.lg.Println("Closing gRPC server")
+
 	errs, ctx := errgroup.WithContext(ctx)
+	errs.Go(func() error {
+		return a.srv.Close(ctx)
+	})
 	errs.Go(a.repo.Close)
-	errs.Go(func() error { return a.srv.Close(ctx) })
 
 	return errs.Wait()
 }
