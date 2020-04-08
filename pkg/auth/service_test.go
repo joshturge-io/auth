@@ -13,14 +13,19 @@ import (
 )
 
 var (
-	srv      *auth.Service
-	password = "secret6"
+	srv        *auth.Service
+	password   = "123password"
+	cipherKeys = []string{
+		"vcMGBMVbxobHRRdX1WBYq0T4L3UYWQLd",
+		"EvMT3FFDNX9dW3SggfyC7sJJ74EkzH32",
+		"tHWYreQPuHhfPLIIqcAliQWgfXdNVWLF",
+	}
 )
 
 func resetRepo() {
 	repository.TestUser = map[string]string{
-		"salt":       "H4jk53hGsk3fj4Dfsj3",
-		"hash":       "dd373f6f7e9338d82a5ccab1be65475c06e97fed63cd59b892024a0a120aa6f0",
+		"salt":       "25b072f201ef24e750dcc558eaf2d8f3",
+		"hash":       "1743545c93d519060a72e5671a66cbe898163b41d8be2a92a57ac3b6a2650c8394cf4f009aa0df642721145694879ace89c1a9973ff601538220d6a59f665524022fc789a3f6512d7f4654ff8f39c7ba7ec5b12e93c08df97be9f8a4",
 		"refresh":    "Uq_XJB5p5clZ_lAjFVND0oTYT9uFe8plBfGHFGMZ4RI=",
 		"expiration": strconv.FormatInt(time.Now().Add(24*time.Hour).Unix(), 10),
 	}
@@ -30,10 +35,11 @@ func resetRepo() {
 
 func init() {
 	repo := repository.NewTestRepository()
-	srv = auth.NewService("secret", repo, &auth.Options{
+	srv = auth.NewService("secret", repo, cipherKeys, &auth.Options{
 		RefreshTokenLength:     32,
 		JWTokenExpiration:      15 * time.Minute,
 		RefreshTokenExpiration: 24 * time.Hour,
+		SaltLength:             16,
 	})
 
 	resetRepo()

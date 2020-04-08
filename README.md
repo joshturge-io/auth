@@ -20,7 +20,8 @@ This service uses a configuration file to set the gRPC server address and the ad
 to a redis instance, these two fields are mandatory as there really isn't any
 default. Within the configuration file you can also specify token generation parameters
 such as the length and expiration of a token, these fields aren't required. An
-example config file can be found [here](config/config.yml).
+example config file can be found [here](config/config.yml). **NOTE**: Cipher keys need
+to be 32 characters long.
 
 ### Defaults
 
@@ -30,9 +31,11 @@ These are the default values for the service configuration:
 |--------------------|--------------|
 | Address            | None         |
 | Repo Address       | None         |
-| Refresh Length     | 32           |
-| Refresh Expiration | 24 (Hours)   |
-| JWT Expiration     | 15 (Minutes) |
+| Cipher Keys        | None         |
+| Cipher Salt Length | 16 Bytes   	|
+| Refresh Length     | 32 Bytes   	|
+| Refresh Expiration | 24 Hours   	|
+| JWT Expiration     | 15 Minutes 	|
 
 ## Building
 
@@ -112,7 +115,7 @@ if there isn't a password.
 * `TEST_REPO` - if this variable is set, the test repository will be used
 instead of the redis repository. This is extremely useful when testing. **NOTE:**
 since this is just a test repository the username can be set to any string you
-like, the password for the test user is `secret6`. I know, very creative.
+like, the password for the test user is `123password`. I know, very creative.
 
 #### Running with docker
 

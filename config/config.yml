@@ -5,6 +5,14 @@ address: "localhost:8080"
 repo:
     address: "localhost:6379"
 
+# cipher keys used to cipher passwords
+cipher:
+    saltlength: 16
+    keys:
+        - "ZmRSpVCMTzFWPGfkZuhXasJJ0nTY2idd"
+        - "5AWKO7URwY8927UGYrTAf9dwBIf6nTCK"
+        - "tBOYjZAZ25h6n9GX6ouuehpZyyheYTNw"
+
 # token options
 token:
     refresh:

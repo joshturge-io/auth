@@ -12,11 +12,23 @@ var ErrConfigNotExist = errors.New("config does not exist")
 type Configuration struct {
 	Address string
 	Repo    RepositoryConfig
+	Cipher  CipherConfig
 	Token   TokenConfig
 }
 
 type RepositoryConfig struct {
 	Address string
+}
+
+type CipherConfig struct {
+	SaltLength int
+	Keys       []string
+}
+
+func (ac *CipherConfig) SetDefaults() {
+	if ac.SaltLength == 0 {
+		ac.SaltLength = 16
+	}
 }
 
 type TokenConfig struct {
@@ -68,6 +80,7 @@ func ParseConfig(path string) (*Configuration, error) {
 	// set defaults if don't exist
 	config.Token.Refresh.SetDefaults()
 	config.Token.Jwt.SetDefaults()
+	config.Cipher.SetDefaults()
 
 	return config, nil
 }

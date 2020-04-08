@@ -2,11 +2,8 @@ package auth
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/joshturge-io/auth/pkg/repository"
@@ -36,28 +33,27 @@ type Options struct {
 	JWTokenExpiration time.Duration
 	// Refresh Expiration time
 	RefreshTokenExpiration time.Duration
+	// length of password salts
+	SaltLength int
 }
 
 // Service is an authentication service used for manipulating sessions
 type Service struct {
 	repo      repository.DepositWithdrawer
+	chall     *Challenger
 	jwtSecret string
 	opt       *Options
 }
 
 // NewService will create a new auth service
-func NewService(secret string, repo repository.DepositWithdrawer, opt *Options) *Service {
-	return &Service{repo, secret, opt}
-}
+func NewService(secret string, repo repository.DepositWithdrawer, keys []string,
+	opt *Options) *Service {
+	cipherKeys := make([][]byte, len(keys))
+	for i, key := range keys {
+		cipherKeys[i] = []byte(key)
+	}
 
-// generateChallengeHash will join a salt and a password and return a sha256 hash of the resulting string
-func (s *Service) generateChallengeHash(salt, password string) string {
-	token := strings.Join([]string{salt, password}, ".")
-
-	hasher := sha256.New()
-	hasher.Write([]byte(token))
-
-	return hex.EncodeToString(hasher.Sum(nil))
+	return &Service{repo, NewChallenger(opt.SaltLength, cipherKeys), secret, opt}
 }
 
 // generateSession will generate a new session
@@ -166,7 +162,8 @@ func (s *Service) validateSession(ctx context.Context, sess *Session) error {
 }
 
 // SessionWithChallenge create a new session provided a valid challenge (username and password)
-func (s *Service) SessionWithChallenge(ctx context.Context, userId, password string) (*Session, error) {
+func (s *Service) SessionWithChallenge(ctx context.Context, userId, password string) (*Session,
+	error) {
 	if userId == "" || password == "" {
 		return nil, ErrInvalidChallenge
 	}
@@ -187,7 +184,8 @@ func (s *Service) SessionWithChallenge(ctx context.Context, userId, password str
 	errs.Go(func() error {
 		salt, err := s.repo.GetSalt(userId)
 		if err != nil {
-			return fmt.Errorf("could not get salt for user: %s from repository: %w", userId, err)
+			return fmt.Errorf("could not get salt for user: %s from repository: %w", userId,
+				err)
 		}
 
 		sa <- salt
@@ -197,7 +195,8 @@ func (s *Service) SessionWithChallenge(ctx context.Context, userId, password str
 	errs.Go(func() error {
 		hash, err := s.repo.GetHash(userId)
 		if err != nil {
-			return fmt.Errorf("could not get hash for user: %s from repository: %w", userId, err)
+			return fmt.Errorf("could not get hash for user: %s from repository: %w", userId,
+				err)
 		}
 
 		ha <- hash
@@ -222,17 +221,19 @@ func (s *Service) SessionWithChallenge(ctx context.Context, userId, password str
 		return nil, err
 	}
 
-	challHash := s.generateChallengeHash(<-sa, password)
+	if valid, err := s.chall.Validate(<-sa, password, <-ha); !valid {
+		if err != nil {
+			return nil, fmt.Errorf("failed to validate challenge: %w", err)
+		}
 
-	if challHash != <-ha {
 		return nil, ErrInvalidChallenge
 	}
 
 	return <-se, nil
 }
 
-// IsValidRefresh will query the repository and validate that it exists, if it doesn't then the token is
-// invalid
+// IsValidRefresh will query the repository and validate that it exists, if it doesn't then the
+// token is invalid
 func (s *Service) IsValidRefresh(ctx context.Context, userId, refresh string) (bool, error) {
 	s.repo.WithContext(ctx)
 	userRefresh, err := s.repo.GetRefreshToken(userId)
@@ -246,8 +247,8 @@ func (s *Service) IsValidRefresh(ctx context.Context, userId, refresh string) (b
 	return userRefresh == refresh, nil
 }
 
-// IsValidJWT will attempt to parse the jwt and check if it has expired. If it fails to parse or has expired
-// then the jwt is invalid
+// IsValidJWT will attempt to parse the jwt and check if it has expired. If it fails to parse
+// or has expired then the jwt is invalid
 func (s *Service) IsValidJWT(tokenStr string) (bool, error) {
 	t, err := token.NewJWFromExisting(s.jwtSecret, tokenStr)
 	if err != nil {
@@ -257,8 +258,8 @@ func (s *Service) IsValidJWT(tokenStr string) (bool, error) {
 	return !t.IsExpired(), nil
 }
 
-// DestroySession will invalidate a session by blacklisting the jwt and removing the refresh token from the
-// users record
+// DestroySession will invalidate a session by blacklisting the jwt and removing the refresh
+// token from the users record
 func (s *Service) DestroySession(ctx context.Context, old *Session) error {
 	s.repo.WithContext(ctx)
 	if err := s.validateSession(ctx, old); err != nil {
