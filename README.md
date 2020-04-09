@@ -76,7 +76,7 @@ This command will build an image from the [Dockerfile](build/package/Dockerfile)
 projects root:
 
 ```bash
-docker build --tag auth build/package/
+docker build -f build/package/Dockerfile --tag auth . 
 ```
 
 #### Building locally
