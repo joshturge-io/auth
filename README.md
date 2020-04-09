@@ -93,13 +93,14 @@ go build -o bin/auth.exe cmd/auth/main.go
 ##### POSIX
 
 I have provided a [Makefile](Makefile) which can be used on POSIX operating systems.
-The file comes with two targets, the first is `build` which will build the project
-and place the binary within a bin directory and the second target `clean` will just
-remove the bin directory. Example usage:
+The file comes with two targets, the first being `build` which will build the project
+and the second target `clean` will just remove the bin directory. Example usage:
 
 ```bash
 make build
 ```
+
+**NOTE**: The build target will place the resulting binary within the `bin/` directory
 
 ## Running
 
