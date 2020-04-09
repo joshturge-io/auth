@@ -4,10 +4,17 @@ An Authentication service for my personal web app. This service uses Redis as
 it's datastore, mainly for it's speed and ability to persist to storage.
 
 This service uses [JSON Web Tokens](https://jwt.io/) to verify a users session.
-For security reasons these tokens expire within a short amount of time, to prevent
-getting logged out every 10-15 minutes this service also provides refresh tokens
-which allow for renewing sessions. A more detailed explanation of this pattern can
-be found [here](https://hasura.io/blog/best-practices-of-using-jwt-with-graphql/).
+For security reasons these tokens expire within a short amount of time and can
+be blacklisted, to prevent getting logged out every 10-15 minutes this service
+also provides refresh tokens which allow for renewing sessions. A more detailed
+explanation of this pattern can be found [here](https://hasura.io/blog/best-practices-of-using-jwt-with-graphql/).
+
+Since Redis tries to keep things simple, it unfortunately doesn't come with a
+way to expire members of a sorted set. This service uses sorted sets to keep
+track of blacklisted JWT's, and as you could imagine this set would start to
+eat up memory over a long period of time. To overcome this the authentication
+service has a seperate goroutine running in the background that periodically
+flushs the blacklist of expired tokens.
 
 ## Getting Started
 
