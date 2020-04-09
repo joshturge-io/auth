@@ -148,16 +148,16 @@ it was run from. To specify an alternative directory you can use the
 
 ## Running Tests
 
-Unit tests can be located within individual packages which can be found under
-the [pkg/](pkg/) directory. An example command for running one of the unit tests
-would be:
+In order to run one of the tests for this project, you will need a redis instance 
+and the environment variable `REDIS_ADDR` set to the address of that redis instance.
+The easiest way to setup a redis instance is with the [Official Docker Image](https://hub.docker.com/_/redis/). The following command will test all the packages for the project:
 
 ```bash
-go test -v pkg/auth/service_test.go
+go test -v ./pkg/...
 ```
 
-The go command above will test the core functionality for this service. In order
-to keep the test as simple as possible, all the requests to redis are being mocked.
+In the near future I will write a mock interface for the redis package to remove the
+need for a redis instance, but for now this is the only way.
 
 More information about running units tests in Go can be found [here](https://golangdocs.com/unit-testing-in-golang).
 
