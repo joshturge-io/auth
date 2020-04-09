@@ -71,11 +71,11 @@ cd auth
 #### Building with docker
 
 More information about how to develop with docker can be found [here](https://docs.docker.com/develop/).
-This command will build an image from the [Dockerfile](Dockerfile) in the
+This command will build an image from the [build/package/Dockerfile](Dockerfile) in the
 projects root:
 
 ```bash
-docker build --tag auth .
+docker build --tag auth build/package/
 ```
 
 #### Building locally
