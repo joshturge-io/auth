@@ -27,8 +27,9 @@ This service uses a configuration file to set the gRPC server address and the ad
 to a redis instance, these two fields are mandatory as there really isn't any
 default. Within the configuration file you can also specify token generation parameters
 such as the length and expiration of a token, these fields aren't required. An
-example config file can be found [here](config/config.yml). **NOTE**: Cipher keys need
-to be 32 characters long.
+example config file can be found [here](config/config.yml).
+
+**NOTE**: Cipher keys need to be 32 characters long.
 
 ### Defaults
 
@@ -71,11 +72,11 @@ cd auth
 #### Building with docker
 
 More information about how to develop with docker can be found [here](https://docs.docker.com/develop/).
-This command will build an image from the [Dockerfile](Dockerfile) in the
+This command will build an image from the [Dockerfile](build/package/Dockerfile) in the
 projects root:
 
 ```bash
-docker build --tag auth .
+docker build --tag auth build/package/
 ```
 
 #### Building locally
