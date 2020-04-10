@@ -99,7 +99,8 @@ func (s *Service) generateSession(ctx context.Context, userId string) (*Session,
 
 	refresh := <-ref
 
-	if err := s.repo.SetRefreshToken(userId, refresh, s.opt.RefreshTokenExpiration); err != nil {
+	if err := s.repo.SetRefreshToken(userId, refresh,
+		s.opt.RefreshTokenExpiration); err != nil {
 		return nil, fmt.Errorf("could not set refresh token: %w", err)
 	}
 
@@ -170,14 +171,14 @@ func (s *Service) SessionWithChallenge(ctx context.Context, userId, password str
 
 	s.repo.WithContext(ctx)
 	var (
-		sa = make(chan string, 1)
-		ha = make(chan string, 1)
-		se = make(chan *Session, 1)
+		saltChan    = make(chan string, 1)
+		hashChan    = make(chan string, 1)
+		sessionChan = make(chan *Session, 1)
 	)
 	defer func() {
-		close(sa)
-		close(ha)
-		close(se)
+		close(saltChan)
+		close(hashChan)
+		close(sessionChan)
 	}()
 
 	errs, ctx := errgroup.WithContext(ctx)
@@ -188,7 +189,7 @@ func (s *Service) SessionWithChallenge(ctx context.Context, userId, password str
 				err)
 		}
 
-		sa <- salt
+		saltChan <- salt
 
 		return nil
 	})
@@ -199,7 +200,7 @@ func (s *Service) SessionWithChallenge(ctx context.Context, userId, password str
 				err)
 		}
 
-		ha <- hash
+		hashChan <- hash
 
 		return nil
 	})
@@ -209,7 +210,7 @@ func (s *Service) SessionWithChallenge(ctx context.Context, userId, password str
 			return err
 		}
 
-		se <- session
+		sessionChan <- session
 
 		return nil
 	})
@@ -221,7 +222,7 @@ func (s *Service) SessionWithChallenge(ctx context.Context, userId, password str
 		return nil, err
 	}
 
-	if valid, err := s.chall.Validate(<-sa, password, <-ha); !valid {
+	if valid, err := s.chall.Validate(<-saltChan, password, <-hashChan); !valid {
 		if err != nil {
 			return nil, fmt.Errorf("failed to validate challenge: %w", err)
 		}
@@ -229,7 +230,7 @@ func (s *Service) SessionWithChallenge(ctx context.Context, userId, password str
 		return nil, ErrInvalidChallenge
 	}
 
-	return <-se, nil
+	return <-sessionChan, nil
 }
 
 // IsValidRefresh will query the repository and validate that it exists, if it doesn't then the
@@ -269,7 +270,10 @@ func (s *Service) DestroySession(ctx context.Context, old *Session) error {
 	errs, ctx := errgroup.WithContext(ctx)
 	errs.Go(func() error {
 		if err := s.repo.RemoveRefreshToken(old.UserId); err != nil {
-			return fmt.Errorf("could not remove refresh token: %w", err)
+			if errors.Is(err, redis.ErrNotExist) {
+				return ErrUserNotExist
+			}
+			return fmt.Errorf("failed to remove refresh token: %w", err)
 		}
 
 		return nil
@@ -286,23 +290,48 @@ func (s *Service) DestroySession(ctx context.Context, old *Session) error {
 		return nil
 	})
 
-	if err := errs.Wait(); err != nil {
-		if errors.Is(err, redis.ErrNotExist) {
-			return ErrUserNotExist
-		}
-		return err
-	}
-
-	return nil
+	return errs.Wait()
 }
 
 // Renew will delete a current users session and generate them a new one
 func (s *Service) Renew(ctx context.Context, old *Session) (*Session, error) {
-	if err := s.validateSession(ctx, old); err != nil {
-		return nil, err
+	if old.UserId == "" || old.Refresh == "" {
+		return nil, ErrInvalidSession
 	}
 
-	if err := s.DestroySession(ctx, old); err != nil {
+	errs, ctx := errgroup.WithContext(ctx)
+	if old.JWT != "" {
+		errs.Go(func() error {
+			jw, err := token.NewJWFromExisting(s.jwtSecret, old.JWT)
+			if err != nil {
+				return err
+			}
+
+			if err := s.repo.SetBlacklist(jw.Token(), jw.ExpiresIn()); err != nil {
+				return fmt.Errorf("could not blacklist token %w", err)
+			}
+
+			return nil
+		})
+	}
+	errs.Go(func() error {
+		if valid, err := s.IsValidRefresh(ctx, old.UserId, old.Refresh); !valid {
+			if err != nil {
+				return err
+			}
+		}
+
+		if err := s.repo.RemoveRefreshToken(old.UserId); err != nil {
+			if errors.Is(err, redis.ErrNotExist) {
+				return ErrUserNotExist
+			}
+			return fmt.Errorf("could not remove refresh token: %w", err)
+		}
+
+		return nil
+	})
+
+	if err := errs.Wait(); err != nil {
 		return nil, err
 	}
 
