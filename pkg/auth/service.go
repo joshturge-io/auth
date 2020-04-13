@@ -20,9 +20,10 @@ var (
 
 // Session holds information about users session
 type Session struct {
-	UserId  string
-	Refresh string
-	JWT     string
+	UserId            string
+	Refresh           string
+	RefreshExpiration time.Time
+	JWT               string
 }
 
 // Options for tokens
@@ -105,8 +106,10 @@ func (s *Service) generateSession(ctx context.Context, userId string) (*Session,
 	}
 
 	return &Session{
-		Refresh: refresh,
-		JWT:     <-jwt,
+		UserId:            userId,
+		Refresh:           refresh,
+		RefreshExpiration: time.Now().Add(s.opt.RefreshTokenExpiration),
+		JWT:               <-jwt,
 	}, nil
 }
 

@@ -12,6 +12,7 @@ message Session {
   string user_id = 1;
   string jwt = 2;
   string refresh_token = 3;
+  int64 refresh_expiration = 4;
 }
 
 message LogoutStatus {

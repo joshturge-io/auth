@@ -29,9 +29,10 @@ func (ga *GRPCAuthService) Login(ctx context.Context, cred *proto.Credentials) (
 	}
 
 	return &proto.Session{
-		UserId:       session.UserId,
-		Jwt:          session.JWT,
-		RefreshToken: session.Refresh,
+		UserId:            session.UserId,
+		Jwt:               session.JWT,
+		RefreshToken:      session.Refresh,
+		RefreshExpiration: session.RefreshExpiration.Unix(),
 	}, nil
 }
 
@@ -45,9 +46,10 @@ func (ga *GRPCAuthService) Refresh(ctx context.Context, sess *proto.Session) (*p
 	}
 
 	return &proto.Session{
-		UserId:       session.UserId,
-		Jwt:          session.JWT,
-		RefreshToken: session.Refresh,
+		UserId:            session.UserId,
+		Jwt:               session.JWT,
+		RefreshToken:      session.Refresh,
+		RefreshExpiration: session.RefreshExpiration.Unix(),
 	}, nil
 }
 
