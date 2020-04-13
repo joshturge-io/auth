@@ -10,9 +10,9 @@ repo:
 cipher:
     #    saltlength: 16
     keys:
-        - "ZmRSpVCMTzFWPGfkZuhXasJJ0nTY2idd"
-        - "5AWKO7URwY8927UGYrTAf9dwBIf6nTCK"
-        - "tBOYjZAZ25h6n9GX6ouuehpZyyheYTNw"
+        - "vcMGBMVbxobHRRdX1WBYq0T4L3UYWQLd"
+        - "EvMT3FFDNX9dW3SggfyC7sJJ74EkzH32"
+        - "tHWYreQPuHhfPLIIqcAliQWgfXdNVWLF"
 
 # token options
 token:
